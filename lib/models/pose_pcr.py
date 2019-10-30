@@ -58,7 +58,8 @@ class CAM(nn.Module):
 
 
 class PCR(nn.Module):
-    def __init__(self, input_channels, input_height, input_width, levels_num=4, cascade_num_per_level=4):
+    def __init__(self, input_channels, input_height, input_width,
+                 keypoints_num, levels_num=4, cascade_num_per_level=4):
         super(PCR, self).__init__()
 
         self.levels_num = levels_num
@@ -72,7 +73,7 @@ class PCR(nn.Module):
                     CAM(input_channels, input_height, input_width))
             setattr(self, "level_" + str(i), nn.Sequential(*cascade_layers))
             setattr(self, "conv1x1_level_" + str(i),
-                    nn.Conv2d(input_channels, input_channels,
+                    nn.Conv2d(input_channels, keypoints_num,
                               kernel_size=1, bias=False))
 
     def forward(self, x):
@@ -103,7 +104,8 @@ def test_CAM():
 def test_PCR():
     inputs = torch.randn(2, 64, 512, 512)
 
-    model = PCR(64, 512, 512, levels_num=4, cascade_num_per_level=4)
+    model = PCR(64, 512, 512, keypoints_num=80,
+                levels_num=5, cascade_num_per_level=4)
 
     outputs = model(inputs)
     for output in outputs:
