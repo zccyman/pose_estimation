@@ -10,29 +10,44 @@ class CAM(nn.Module):
 
         self.se_branch = nn.Sequential(
             nn.AdaptiveMaxPool2d((input_height, input_width)),
-            nn.Conv2d(input_channels, middle_channels,
-                      kernel_size=1, bias=False),
-            nn.Conv2d(middle_channels, input_channels,
-                      kernel_size=1, bias=False),
-            nn.Sigmoid()
+            nn.Conv2d(input_channels, middle_channels, kernel_size=1, bias=False),
+            nn.Conv2d(middle_channels, input_channels, kernel_size=1, bias=False),
+            nn.Sigmoid(),
         )
 
         # dilated conv branch
         self.dilated_branch_num = 4
         for rate in range(self.dilated_branch_num):
-            setattr(self, "dilated_conv_" + str(rate),
-                    nn.Conv2d(input_channels, middle_channels,
-                              kernel_size=3, stride=1, padding=rate + 1, dilation=rate + 1, bias=False))
+            setattr(
+                self,
+                "dilated_conv_" + str(rate),
+                nn.Conv2d(
+                    input_channels,
+                    middle_channels,
+                    kernel_size=3,
+                    stride=1,
+                    padding=rate + 1,
+                    dilation=rate + 1,
+                    bias=False,
+                ),
+            )
 
         self.hdc_branch = nn.Sequential(
-            nn.ConvTranspose2d(input_channels, input_channels,
-                               kernel_size=3, stride=1, padding=1, bias=False),
+            nn.ConvTranspose2d(
+                input_channels,
+                input_channels,
+                kernel_size=3,
+                stride=1,
+                padding=1,
+                bias=False,
+            )
         )
 
         self.res_branch = nn.Sequential(
-            nn.Upsample(scale_factor=1, mode='bilinear', align_corners=True),
-            nn.Conv2d(input_channels, input_channels,
-                      kernel_size=1, stride=1, bias=False)
+            nn.Upsample(scale_factor=1, mode="bilinear", align_corners=True),
+            nn.Conv2d(
+                input_channels, input_channels, kernel_size=1, stride=1, bias=False
+            ),
         )
 
     def forward(self, x):
@@ -58,8 +73,15 @@ class CAM(nn.Module):
 
 
 class PCR(nn.Module):
-    def __init__(self, input_channels, input_height, input_width,
-                 keypoints_num, levels_num=4, cascade_num_per_level=4):
+    def __init__(
+        self,
+        input_channels,
+        input_height,
+        input_width,
+        keypoints_num,
+        levels_num=5,
+        cascade_num_per_level=4,
+    ):
         super(PCR, self).__init__()
 
         self.levels_num = levels_num
@@ -69,12 +91,13 @@ class PCR(nn.Module):
         for i in range(self.levels_num):
             cascade_layers = []
             for j in range(self.cascade_num_per_level):
-                cascade_layers.append(
-                    CAM(input_channels, input_height, input_width))
+                cascade_layers.append(CAM(input_channels, input_height, input_width))
             setattr(self, "level_" + str(i), nn.Sequential(*cascade_layers))
-            setattr(self, "conv1x1_level_" + str(i),
-                    nn.Conv2d(input_channels, keypoints_num,
-                              kernel_size=1, bias=False))
+            setattr(
+                self,
+                "conv1x1_level_" + str(i),
+                nn.Conv2d(input_channels, keypoints_num, kernel_size=1, bias=False),
+            )
 
     def forward(self, x):
         outs = []
@@ -104,8 +127,7 @@ def test_CAM():
 def test_PCR():
     inputs = torch.randn(2, 64, 512, 512)
 
-    model = PCR(64, 512, 512, keypoints_num=80,
-                levels_num=5, cascade_num_per_level=4)
+    model = PCR(64, 512, 512, keypoints_num=80, levels_num=5, cascade_num_per_level=4)
 
     outputs = model(inputs)
     for output in outputs:
